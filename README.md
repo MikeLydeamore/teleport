@@ -73,7 +73,7 @@ This action needs a **Personal Access Token (PAT)** with permission to write to 
   - **Classic:**
     - Select the `repo` scope (covers read/write access to repos).
 
-👉 Copy the token somewhere safe — you’ll only see it once.
+Copy the token somewhere safe — you’ll only see it once.
 
 ---
 
@@ -82,8 +82,6 @@ This action needs a **Personal Access Token (PAT)** with permission to write to 
 - Navigate to: **Settings → Secrets and variables → Actions → New repository secret**.
 - Name it: `CROSS_REPO_PAT`  
 - Paste the token into the **Value** box and click **Save**.
-
-> 🔒 Secrets are encrypted and only exposed to workflows that use them.
 
 ---
 
