@@ -1,0 +1,49 @@
+name: Teleport between repos
+
+on:
+  workflow_call:
+    inputs:
+     target_repo:
+        required: true
+        type: string
+    source_path:
+        required: true
+        type: string
+    target_path:
+        required: true
+        type: string
+    secrets:
+      token:
+        required: true
+
+
+jobs:
+  teleport:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout source repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository }}
+          path: source
+
+      - name: Checkout target repo
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ inputs.target_repo }}
+          path: target-repo
+          token: ${{ secrets.token }}       # Personal Access Token with repo write perms
+
+      - name: Copy files
+        run: |
+          mkdir -p target-repo/${{ inputs.target_path }}
+          rsync -av --delete source/${{ inputs.source_path }} target-repo/${{ inputs.target_path }}/
+
+      - name: Commit & push changes
+        working-directory: target-repo
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "Sync directory from source repo" || echo "No changes to commit"
+          git push
