@@ -12,38 +12,41 @@ on:
       target_path:
         required: true
         type: string
+    secrets:
       token:
         required: true
-        type: string
-
 
 jobs:
   teleport:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout source repo
+      - name: Checkout source repo (caller)
         uses: actions/checkout@v4
         with:
           repository: ${{ github.repository }}
           path: source
 
-      - name: Checkout target repo
+      - name: Checkout target repo (write)
         uses: actions/checkout@v4
         with:
           repository: ${{ inputs.target_repo }}
           path: target-repo
-          token: ${{ secrets.token }}       # Personal Access Token with repo write perms
+          token: ${{ secrets.token }}   # PAT with repo write access
+          persist-credentials: true     # default; ensures push uses this token
 
       - name: Copy files
         run: |
-          mkdir -p target-repo/${{ inputs.target_path }}
-          rsync -av --delete source/${{ inputs.source_path }} target-repo/${{ inputs.target_path }}/
+          mkdir -p "target-repo/${{ inputs.target_path }}"
+          # Trailing slash on source copies *contents*; remove it to copy the directory itself
+          rsync -av --delete \
+            "source/${{ inputs.source_path }}/" \
+            "target-repo/${{ inputs.target_path }}/"
 
       - name: Commit & push changes
         working-directory: target-repo
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Sync directory from source repo" || echo "No changes to commit"
+          git add -A
+          git commit -m "Sync from ${{ github.repository }}:${{ inputs.source_path }} → ${{ inputs.target_repo }}:${{ inputs.target_path }}" || echo "No changes to commit"
           git push
