@@ -1,0 +1,62 @@
+name: Teleport between repos
+description: Copy a folder from the caller repo into a target repo path and push
+author: Michael Lydeamore
+branding:
+  icon: upload-cloud
+  color: blue
+
+inputs:
+  target_repo:
+    description: "owner/repo to push into"
+    required: true
+  source_path:
+    description: "Path in the caller repo to copy FROM"
+    required: true
+  target_path:
+    description: "Path in the target repo to copy TO"
+    required: true
+  token:
+    description: "PAT with write access to target repo (and read to source if private)"
+    required: true
+
+runs:
+  using: "composite"
+  steps:
+    - name: Checkout source repo (caller)
+      uses: actions/checkout@v4
+      with:
+        # defaults to github.repository, but keeping explicit path for clarity
+        path: source
+
+    - name: Checkout target repo (write)
+      uses: actions/checkout@v4
+      with:
+        repository: ${{ inputs.target_repo }}
+        path: target-repo
+        token: ${{ inputs.token }}
+        persist-credentials: true
+
+    - name: Copy files
+      shell: bash
+      run: |
+        set -euo pipefail
+        mkdir -p "target-repo/${{ inputs.target_path }}"
+        # Trailing slash on source copies *contents* of the folder
+        rsync -av --delete \
+          "source/${{ inputs.source_path }}/" \
+          "target-repo/${{ inputs.target_path }}/"
+
+    - name: Commit & push changes
+      shell: bash
+      working-directory: target-repo
+      run: |
+        set -euo pipefail
+        git config user.name  "${GIT_USER_NAME:-github-actions[bot]}"
+        git config user.email "${GIT_USER_EMAIL:-41898282+github-actions[bot]@users.noreply.github.com}"
+        git add -A
+        if git diff --cached --quiet; then
+          echo "No changes to commit."
+          exit 0
+        fi
+        git commit -m "Sync from ${GITHUB_REPOSITORY}:${{ inputs.source_path }} → ${{ inputs.target_repo }}:${{ inputs.target_path }}"
+        git push
