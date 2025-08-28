@@ -12,8 +12,9 @@ on:
       target_path:
         required: true
         type: string
-    token:
-      required: true
+      token:
+        required: true
+        type: string
 
 
 jobs:
